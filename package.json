@@ -1,0 +1,46 @@
+{
+  "name": "core-rag-app",
+  "version": "1.0.0",
+  "description": "A private, terminal-based utility that indexes local documents into a vector database to enable instant semantic querying via a command-line interface",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KhanRameen/RAG-to-Riches.git"
+  },
+  "keywords": [
+    "RAG",
+    "Retrieval-Augmented",
+    "Generation",
+    "Semantic",
+    "Search",
+    "Vector",
+    "Database",
+    "Document",
+    "Querying",
+    "CLI",
+    "Local",
+    "LLM",
+    "Offline",
+    "Search"
+  ],
+  "author": "Rameen Khan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KhanRameen/RAG-to-Riches/issues"
+  },
+  "homepage": "https://github.com/KhanRameen/RAG-to-Riches#readme",
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "axios": "^1.16.1",
+    "dotenv": "^17.4.2",
+    "pg": "^8.21.0"
+  }
+}
