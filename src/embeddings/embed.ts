@@ -13,9 +13,3 @@ export async function getEmbeddings(text: string) {
   return res.data.embedding;
 }
 
-(async () => {
-  const text = "Refund policy for customers";
-  const embeddings = await getEmbeddings(text);
-  console.log("Embedding Length", embeddings?.length);
-  console.log("First 10 Values", embeddings?.slice(0, 10));
-})();
