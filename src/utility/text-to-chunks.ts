@@ -1,4 +1,4 @@
-export function textToChunks(text: string, chunkSize = 300, overlap = 80) {
+export function textToChunks(text: string, chunkSize = 500, overlap = 100) {
   const chunks = [];
   let start = 0;
   while (start < text.length) {

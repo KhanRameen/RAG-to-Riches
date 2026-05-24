@@ -1,4 +1,18 @@
-### RAG Architecture:
+# Core RAG pipeline: Understanding the Science behind
+
+**_Here's what i learned_:**
+
+LLM operates on vector embeddings rather than raw text strings, all our query string is converted into high-dimensional vectors. Retrieval Augmented Generation (RAG) in its basic form is just the conversion of text into embeddings (vector based numeric values). The system then calculates semantic similarity (using cosine function) to find the document embeddings closest to the query vector, retrieves the corresponding text segments, and feeds that relevant text to the LLM alongside the query for contextb ased generation.
+
+**Vectorization** _- text to math_ > **Similarity Search** - _nearest neighbors_ > **Contextual Augmentation** - _LLM Execution_
+
+## _Run Code:_
+
+```bash
+npx tsx src/chat.ts ./path-to/docs-folder/name-of-doc.pdf
+```
+
+### Code Architecture:
 
 ```
 Documents;
@@ -42,6 +56,7 @@ PDF / DOCX / XLSX
         ↓
     Retrieval
 ```
+
 Document ingestion is often harder than the AI itself. Because documents can contain:
 
 - tables
@@ -54,6 +69,7 @@ Document ingestion is often harder than the AI itself. Because documents can con
 
 - weird encodings
 
+To keep things simple, I have used simple document parsing to keep the focus on RAG concepts for now
 
 **Parsing Libraries**
 
@@ -63,9 +79,12 @@ Document ingestion is often harder than the AI itself. Because documents can con
 | DOCX      | [mammoth.js](https://github.com/mwilliamson/mammoth.js?utm_source=chatgpt.com) |
 | XLSX      | [SheetJS (xlsx)](https://sheetjs.com?utm_source=chatgpt.com)                   |
 
-*RAG systems often struggle with spreadsheets because tables lose meaning when flattened into text* 
+**Limitations**
 
-soluton:
-> table-aware chunking and structured retrieval
- 
- 
+RAG systems often struggle with spreadsheets because tables lose meaning when flattened into text
+
+\_ _soluton (not-implemented): table-aware chunking and structured retrieval_
+
+Some PDFs are scanned images and NOT actual text.
+
+\_ _soluton (not-implemented): OCR, layout detection, vision models_
