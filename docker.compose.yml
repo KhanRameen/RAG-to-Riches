@@ -1,12 +1,19 @@
 service:
   postgres:
-    image: pgvector/pgvector:pg16
-     environment:
-      POSTGRES_USER: postgres 
+    image: pgvector/pgvector:pg17
+    container_name: rag-postgres
+
+    environment:
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ra
+      POSTGRES_DB: rag
     ports:
       - "5432:5432"
 
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
 #Alter POSTGRES_USER and POSTGRES_PASSWORD to secure values.  the convention is to use a .env file and reference variables like ${DB_PASSWORD}.
 # This file is missing a volumes block. Currently, if you stop the container, all your indexed documents and vectors will be permanently deleted
