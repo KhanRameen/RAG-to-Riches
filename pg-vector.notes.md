@@ -1,0 +1,128 @@
+# Data Persistance!
+
+\*uptil now I was storing all the chunks and embeddings in a variable, **now we integrate vector db\***
+
+## So what is a Vector Database?
+
+A vector DB stores:
+
+```
+Chunk Text
++
+Embedding Vector
++
+Metadata
+```
+
+| id  | text             | embedding    |
+| --- | ---------------- | ------------ |
+| 1   | Refund policy... | [0.123, ...] |
+| 2   | Leave policy...  | [0.456, ...] |
+
+for my learning i have chosen **pgvector** since i already have familiarity of PostgreSQL and pgvector happens to be just an extention of **vector data type** to Postgresm, transforming it to a vector db.But there do exist other, much common separate vector database systems like Pinecone, Qdrant, Weaviate etc.
+
+# Step 1: Setup
+
+Instead of locally installing PostgreSQ I am using Docker to use it virtually instead.
+
+### 1- The docker-compose.yml file
+
+```yaml
+services:
+  postgres: #service nickname
+    image: pgvector/pgvector:pg17 # pulls the official pgvector image built on Postgres version 17
+    container_name: rag-postgres #nickname of the container (you choose it, wanna write "tears-of-ai" go ahead.. name it)
+
+    environment: # you write here the required startup settings
+      POSTGRES_USER: postgresn #master administrator username
+      POSTGRES_PASSWORD: postgres #login password to admin
+      POSTGRES_DB: rag #empty db name on, created on startup
+
+    ports:
+      - "5432:5432" #[Your Computer Port] : [Inside Container Port]
+      #[Your Computer Port] : [Inside Container Port]. PostgreSQL naturally listens to port 5432 inside its own little bubble. This line opens a door so code running on your actual laptop can talk to the database at localhost:5432
+
+    volumes: #Storage for data persistance, without it internal data vanishes since containers are temporary.
+      - postgres_data:/var/lib/postgresql/data #links a virtual storage folder > name:path
+
+volumes: # registers the database you write under it as a permanent, global storage volume
+  postgres_data: #name of out virtual storage folder
+```
+### 2-Start Database
+run
+```
+docker compose up
+```
+Verify:
+```
+docker ps
+```
+
+*output: rag-postgres*
+
+### 3-Connect to PostgreSQL
+on the terminal, enter:
+```
+docker exec -it rag-postgres psql -U postgres -d rag
+```
+output:
+```
+rag=#
+```
+
+**The syntax break down:**
+
+<exec:> Tells Docker to execute a brand new command inside an already running container.
+
+<it:> Short for interactive and tty. This keeps a live connection open between your keyboard and the container so you can type live commands.
+
+<rag-postgres:> The specific name of the container you want to enter.
+
+<psql:> The name of the built-in terminal program inside the container used to talk to PostgreSQL.
+
+<postgres:> -U Logs you in using the admin Username (postgres) you set up in your file.
+
+<rag:> -d Automatically opens the specific database named rag
+
+**The Result:** Your prompt changes to rag=#, meaning your Windows terminal is now temporarily acting as a direct hotline inside your Linux database.
+
+# Step 2: Enable pgvector
+Run:
+```sql
+CREATE EXTENSION vector;
+```
+Verify:
+```bash
+\dx
+```
+
+You should see something similar to `vector` listed among installed extensions.
+
+*Concept*: once you install pgvector, your PostgreSQL starts to understand VECTOR datatype
+
+# Step 3: Create Our First Vector Table
+
+```sql
+CREATE TABLE document_chunks (
+    id SERIAL PRIMARY KEY,
+
+    source_file TEXT NOT NULL,
+
+    chunk_text TEXT NOT NULL,
+
+    embedding VECTOR(768) --notice this 768
+);
+```
+**Why Vector (768):** 768 is the embedding size of the model `nomic-embed-text`. it varies from model to model. We are to set, in our database, the length of the vector exactly as the length of the embedding our model provides.
+
+### Inspect the Table
+Run:
+```
+\d document_chunks
+```
+You should see:
+```
+embedding | vector(768)
+```
+
+**Now the embeddings and the chunks lives permanently in PostgreSQL**
