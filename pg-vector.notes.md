@@ -1,4 +1,4 @@
-# Data Persistance!
+# Vector Database for Data Persistance!
 
 \*uptil now I was storing all the chunks and embeddings in a variable, **now we integrate vector db\***
 
@@ -48,24 +48,33 @@ services:
 volumes: # registers the database you write under it as a permanent, global storage volume
   postgres_data: #name of out virtual storage folder
 ```
+
 ### 2-Start Database
+
 run
+
 ```
 docker compose up
 ```
+
 Verify:
+
 ```
 docker ps
 ```
 
-*output: rag-postgres*
+_output: rag-postgres_
 
 ### 3-Connect to PostgreSQL
+
 on the terminal, enter:
+
 ```
 docker exec -it rag-postgres psql -U postgres -d rag
 ```
+
 output:
+
 ```
 rag=#
 ```
@@ -87,18 +96,22 @@ rag=#
 **The Result:** Your prompt changes to rag=#, meaning your Windows terminal is now temporarily acting as a direct hotline inside your Linux database.
 
 # Step 2: Enable pgvector
+
 Run:
+
 ```sql
 CREATE EXTENSION vector;
 ```
+
 Verify:
+
 ```bash
 \dx
 ```
 
 You should see something similar to `vector` listed among installed extensions.
 
-*Concept*: once you install pgvector, your PostgreSQL starts to understand VECTOR datatype
+_Concept_: once you install pgvector, your PostgreSQL starts to understand VECTOR datatype
 
 # Step 3: Create Our First Vector Table
 
@@ -113,16 +126,110 @@ CREATE TABLE document_chunks (
     embedding VECTOR(768) --notice this 768
 );
 ```
+
 **Why Vector (768):** 768 is the embedding size of the model `nomic-embed-text`. it varies from model to model. We are to set, in our database, the length of the vector exactly as the length of the embedding our model provides.
 
 ### Inspect the Table
+
 Run:
+
 ```
 \d document_chunks
 ```
+
 You should see:
+
 ```
 embedding | vector(768)
 ```
 
 **Now the embeddings and the chunks lives permanently in PostgreSQL**
+
+---
+
+# The Real Sauce!
+
+instead of calculating cosine similarity ourselves, we will now let Postgres do the job.
+
+When we write:
+
+```sql
+ORDER BY embedding <=> query_vector
+```
+
+it is like saying:
+
+`"Sort rows by how close their embeddings are to this query embedding."`
+
+so in a normal sql query way we can think of it as:
+`ORDER BY cosine_distance`
+except pgvector implements it efficiently.
+
+## The Operators
+
+| Operator | Meaning                |
+| -------- | ---------------------- |
+| `<->`    | Euclidean distance     |
+| `<#>`    | Negative inner product |
+| `<=>`    | Cosine distance        |
+
+For RAG we almost always use **<=>**
+because we care about semantic similarity.
+
+### Important Concept
+
+Earlier we learned:
+
+Cosine Similarity:
+
+```
+1 = very similar
+0 = unrelated
+-1 = opposite
+```
+
+**But pgvector uses Cosine Distance instead**
+| Similarity | Distance |
+| ---------- | -------- |
+| 1.0 | 0.0 |
+| 0.9 | 0.1 |
+| 0.2 | 0.8 |
+
+**Relationship:**
+`distance = 1 - similarity`
+
+**When comparing**
+we make sure to use `::vector`
+this converts the retrived data into a true vector data type
+
+eg:
+
+```sql
+
+db.query(
+    `
+      SELECT
+        id,
+        source_file,
+        chunk_text,
+        embedding <=> $1::vector AS distance
+      FROM document_chunks
+      ORDER BY distance
+      LIMIT $2
+    `,
+    [vector, limit]
+  );
+
+```
+
+**This is now Semantic Search using SQL**
+
+The fundamental job of a vector DB:
+
+```
+Store vectors
++
+Find nearest vectors
+```
+
+That's it. Everything else is extra features.
