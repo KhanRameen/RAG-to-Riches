@@ -1,90 +1,235 @@
-# Core RAG pipeline: Understanding the Science behind
+# Vector Database for Data Persistance!
 
-**_Here's what i learned_:**
+\*uptil now I was storing all the chunks and embeddings in a variable, **now we integrate vector db\***
 
-LLM operates on vector embeddings rather than raw text strings, all our query string is converted into high-dimensional vectors. Retrieval Augmented Generation (RAG) in its basic form is just the conversion of text into embeddings (vector based numeric values). The system then calculates semantic similarity (using cosine function) to find the document embeddings closest to the query vector, retrieves the corresponding text segments, and feeds that relevant text to the LLM alongside the query for contextb ased generation.
+## So what is a Vector Database?
 
-**Vectorization** _- text to math_ > **Similarity Search** - _nearest neighbors_ > **Contextual Augmentation** - _LLM Execution_
+A vector DB stores:
 
-## _Run Code:_
+```
+Chunk Text
++
+Embedding Vector
++
+Metadata
+```
+
+| id  | text             | embedding    |
+| --- | ---------------- | ------------ |
+| 1   | Refund policy... | [0.123, ...] |
+| 2   | Leave policy...  | [0.456, ...] |
+
+for my learning i have chosen **pgvector** since i already have familiarity of PostgreSQL and pgvector happens to be just an extention of **vector data type** to Postgresm, transforming it to a vector db.But there do exist other, much common separate vector database systems like Pinecone, Qdrant, Weaviate etc.
+
+# Step 1: Setup
+
+Instead of locally installing PostgreSQ I am using Docker to use it virtually instead.
+
+### 1- The docker-compose.yml file
+
+```yaml
+services:
+  postgres: #service nickname
+    image: pgvector/pgvector:pg17 # pulls the official pgvector image built on Postgres version 17
+    container_name: rag-postgres #nickname of the container (you choose it, wanna write "tears-of-ai" go ahead.. name it)
+
+    environment: # you write here the required startup settings
+      POSTGRES_USER: postgresn #master administrator username
+      POSTGRES_PASSWORD: postgres #login password to admin
+      POSTGRES_DB: rag #empty db name on, created on startup
+
+    ports:
+      - "5432:5432" #[Your Computer Port] : [Inside Container Port]
+      #[Your Computer Port] : [Inside Container Port]. PostgreSQL naturally listens to port 5432 inside its own little bubble. This line opens a door so code running on your actual laptop can talk to the database at localhost:5432
+
+    volumes: #Storage for data persistance, without it internal data vanishes since containers are temporary.
+      - postgres_data:/var/lib/postgresql/data #links a virtual storage folder > name:path
+
+volumes: # registers the database you write under it as a permanent, global storage volume
+  postgres_data: #name of out virtual storage folder
+```
+
+### 2-Start Database
+
+run
+
+```
+docker compose up
+```
+
+Verify:
+
+```
+docker ps
+```
+
+_output: rag-postgres_
+
+### 3-Connect to PostgreSQL
+
+on the terminal, enter:
+
+```
+docker exec -it rag-postgres psql -U postgres -d rag
+```
+
+output:
+
+```
+rag=#
+```
+
+**The syntax break down:**
+
+<exec:> Tells Docker to execute a brand new command inside an already running container.
+
+<it:> Short for interactive and tty. This keeps a live connection open between your keyboard and the container so you can type live commands.
+
+<rag-postgres:> The specific name of the container you want to enter.
+
+<psql:> The name of the built-in terminal program inside the container used to talk to PostgreSQL.
+
+<postgres:> -U Logs you in using the admin Username (postgres) you set up in your file.
+
+<rag:> -d Automatically opens the specific database named rag
+
+**The Result:** Your prompt changes to rag=#, meaning your Windows terminal is now temporarily acting as a direct hotline inside your Linux database.
+
+# Step 2: Enable pgvector
+
+Run:
+
+```sql
+CREATE EXTENSION vector;
+```
+
+Verify:
 
 ```bash
-npx tsx src/chat.ts ./path-to/docs-folder/name-of-doc.pdf
+\dx
 ```
 
-### Code Architecture:
+You should see something similar to `vector` listed among installed extensions.
 
-```
-Documents;
-↓
-Embeddings
-↓
-Vector Search
-↓
-Retrieved Context
-↓
-LLM
-```
+_Concept_: once you install pgvector, your PostgreSQL starts to understand VECTOR datatype
 
-### Embedding model
+# Step 3: Create Our First Vector Table
 
-Ollama "nomic-embed-text"
+```sql
+CREATE TABLE document_chunks (
+    id SERIAL PRIMARY KEY,
 
-### LLM Model:
+    source_file TEXT NOT NULL,
 
-Ollama "llama3"
+    chunk_text TEXT NOT NULL,
 
-### Cosine similarity:
-
-Embeddings are directional meaning encoders
-NOT absolute values!
-The focus is on the direction rather than the length of the vectors. (if two embeddings have a closer angle i.e similar direction then they are closely related):
-[Understanding Cosine Similarity and its Role in LLM Models with RAG](https://www.escape-force.com/post/understanding-cosine-similarity-and-its-role-in-llm-models-with-retrieval-augmented-generation-rag)
-
-### Document Ingestion
-
-**Pipeline**
-
-```
-PDF / DOCX / XLSX
-        ↓
- Extract Raw Text
-        ↓
-     Chunking
-        ↓
-    Embeddings
-        ↓
-    Retrieval
+    embedding VECTOR(768) --notice this 768
+);
 ```
 
-Document ingestion is often harder than the AI itself. Because documents can contain:
+**Why Vector (768):** 768 is the embedding size of the model `nomic-embed-text`. it varies from model to model. We are to set, in our database, the length of the vector exactly as the length of the embedding our model provides.
 
-- tables
+### Inspect the Table
 
-- broken formatting
+Run:
 
-- scanned images
+```
+\d document_chunks
+```
 
-- headers/footers
+You should see:
 
-- weird encodings
+```
+embedding | vector(768)
+```
 
-To keep things simple, I have used simple document parsing to keep the focus on RAG concepts for now
+**Now the embeddings and the chunks lives permanently in PostgreSQL**
 
-**Parsing Libraries**
+---
 
-| File Type | Library                                                                        |
-| --------- | ------------------------------------------------------------------------------ |
-| PDF       | [pdf-parse](https://www.npmjs.com/package/pdf-parse?utm_source=chatgpt.com)    |
-| DOCX      | [mammoth.js](https://github.com/mwilliamson/mammoth.js?utm_source=chatgpt.com) |
-| XLSX      | [SheetJS (xlsx)](https://sheetjs.com?utm_source=chatgpt.com)                   |
+# The Real Sauce!
 
-**Limitations**
+instead of calculating cosine similarity ourselves, we will now let Postgres do the job.
 
-RAG systems often struggle with spreadsheets because tables lose meaning when flattened into text
+When we write:
 
-\_ _soluton (not-implemented): table-aware chunking and structured retrieval_
+```sql
+ORDER BY embedding <=> query_vector
+```
 
-Some PDFs are scanned images and NOT actual text.
+it is like saying:
 
-\_ _soluton (not-implemented): OCR, layout detection, vision models_
+`"Sort rows by how close their embeddings are to this query embedding."`
+
+so in a normal sql query way we can think of it as:
+`ORDER BY cosine_distance`
+except pgvector implements it efficiently.
+
+## The Operators
+
+| Operator | Meaning                |
+| -------- | ---------------------- |
+| `<->`    | Euclidean distance     |
+| `<#>`    | Negative inner product |
+| `<=>`    | Cosine distance        |
+
+For RAG we almost always use **<=>**
+because we care about semantic similarity.
+
+### Important Concept
+
+Earlier we learned:
+
+Cosine Similarity:
+
+```
+1 = very similar
+0 = unrelated
+-1 = opposite
+```
+
+**But pgvector uses Cosine Distance instead**
+| Similarity | Distance |
+| ---------- | -------- |
+| 1.0 | 0.0 |
+| 0.9 | 0.1 |
+| 0.2 | 0.8 |
+
+**Relationship:**
+`distance = 1 - similarity`
+
+**When comparing**
+we make sure to use `::vector`
+this converts the retrived data into a true vector data type
+
+eg:
+
+```sql
+
+db.query(
+    `
+      SELECT
+        id,
+        source_file,
+        chunk_text,
+        embedding <=> $1::vector AS distance
+      FROM document_chunks
+      ORDER BY distance
+      LIMIT $2
+    `,
+    [vector, limit]
+  );
+
+```
+
+**This is now Semantic Search using SQL**
+
+The fundamental job of a vector DB:
+
+```
+Store vectors
++
+Find nearest vectors
+```
+
+That's it. Everything else is extra features.
