@@ -19,7 +19,8 @@ Metadata
 | 1   | Refund policy... | [0.123, ...] |
 | 2   | Leave policy...  | [0.456, ...] |
 
-for my learning i have chosen **pgvector** since i already have familiarity of PostgreSQL and pgvector happens to be just an extention of **vector data type** to Postgresm, transforming it to a vector db.But there do exist other, much common separate vector database systems like Pinecone, Qdrant, Weaviate etc.
+for my learning i have chosen **pgvector** since i already have familiarity of PostgreSQL and pgvector happens to be just an extention of **vector data type** to Postgres, turning it from an sql db to a vector db.
+There do exist other, more common separate vector database systems like Pinecone, Qdrant, Weaviate etc.
 
 # Step 1: Setup
 
@@ -233,3 +234,63 @@ Find nearest vectors
 ```
 
 That's it. Everything else is extra features.
+
+---
+# Indexing in Vector DB
+Using traditional db indexing method fails on vectors because comparing every query vector with the stored chunks vector, which in a real world use case excedea to millions and billions of vectors, can become very painful for the DB. 
+
+Additionally vectors, unlike traditional data, don't really need a similarity (vector A = vector B) search, rather the closest vectors to the query vector suffice the query vector search scenario. 
+
+This is why instead of indexing every vector, we only check the vectors that are likely to be close.This method is called **Approximate Nearest Neighbor (ANN)** 
+
+### Two Major Approaches for ANN
+- `IVFFlat:` Works by clustering vectors.
+- `HNSW:` Newer, better approach. *<- This is what we will use*
+
+## Understanding HNSW
+HNSW creates graphs of vectors, so you start searching from somewhere, jump to the closer vectors jump after jump until you find your answer.
+```js
+    `A`
+ ↙   ↓   ↘
+B    `C`    D
+ ↙   ↓   ↘
+E    F    `G`
+           ↓
+          ...
+```
+HNSW indexes faster and with better accuracy compared to IVFFlat
+
+## usage
+```SQL
+CREATE INDEX document_chunks_embedding_hnsw
+ON document_chunks
+USING hnsw (
+    embedding vector_cosine_ops  /*indexing operation*/
+);
+```
+`vector_cosine_ops` defines the search operation using cosine distance for **embedding <=> query_vector**
+
+*Real Rag System Scale from 200 chunks to 20M chunks very fast and thus ANN indexes become essential!*
+
+---
+# Metadata
+For a smarter search instead of searching all chunks real systems user Meta data filtering.
+
+*example*
+```sql
+Only chunks from:
+- finance department
+- uploaded this month
+- company handbook
+```
+to do this we just add columns to the table 
+
+*example schema*
+```sql
+ALTER TABLE document_chunks
+ADD COLUMN department TEXT;
+```
+*example usage*
+```sql 
+WHERE department = 'finance'
+```
