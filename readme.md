@@ -20,19 +20,19 @@ Metadata
 | 2   | Leave policy...  | [0.456, ...] |
 
 for my learning i have chosen **pgvector** since i already have familiarity of PostgreSQL and pgvector happens to be just an extention of **vector data type** to Postgres, turning it from an sql db to a vector db.
-There do exist other, more common separate vector database systems like Pinecone, Qdrant, Weaviate etc.
+There do exist other, more common separate vector database systems like Pinecone, Qdrant, Weaviate which i may try later but rightnow is not the time...
 
 # Step 1: Setup
 
 Instead of locally installing PostgreSQ I am using Docker to use it virtually instead.
 
-### 1- The docker-compose.yml file
+### 1- The docker-compose.yml file 
 
 ```yaml
 services:
   postgres: #service nickname
     image: pgvector/pgvector:pg17 # pulls the official pgvector image built on Postgres version 17
-    container_name: rag-postgres #nickname of the container (you choose it, wanna write "tears-of-ai" go ahead.. name it)
+    container_name: rag-postgres #nickname of the container
 
     environment: # you write here the required startup settings
       POSTGRES_USER: postgresn #master administrator username
@@ -236,19 +236,24 @@ Find nearest vectors
 That's it. Everything else is extra features.
 
 ---
+
 # Indexing in Vector DB
-Using traditional db indexing method fails on vectors because comparing every query vector with the stored chunks vector, which in a real world use case excedea to millions and billions of vectors, can become very painful for the DB. 
 
-Additionally vectors, unlike traditional data, don't really need a similarity (vector A = vector B) search, rather the closest vectors to the query vector suffice the query vector search scenario. 
+Using traditional db indexing method fails on vectors because comparing every query vector with the stored chunks vector, which in a real world use case excedea to millions and billions of vectors, can become very painful for the DB.
 
-This is why instead of indexing every vector, we only check the vectors that are likely to be close.This method is called **Approximate Nearest Neighbor (ANN)** 
+Additionally vectors, unlike traditional data, don't really need a similarity (vector A = vector B) search, rather the closest vectors to the query vector suffice the query vector search scenario.
+
+This is why instead of indexing every vector, we only check the vectors that are likely to be close.This method is called **Approximate Nearest Neighbor (ANN)**
 
 ### Two Major Approaches for ANN
+
 - `IVFFlat:` Works by clustering vectors.
-- `HNSW:` Newer, better approach. *<- This is what we will use*
+- `HNSW:` Newer, better approach. _<- This is what we will use_
 
 ## Understanding HNSW
+
 HNSW creates graphs of vectors, so you start searching from somewhere, jump to the closer vectors jump after jump until you find your answer.
+
 ```js
     `A`
  ↙   ↓   ↘
@@ -258,39 +263,75 @@ E    F    `G`
            ↓
           ...
 ```
+
 HNSW indexes faster and with better accuracy compared to IVFFlat
 
 ## usage
+
 ```SQL
+/*run this docker exec -it rag-postgres psql -U postgres -d rag*/
+
 CREATE INDEX document_chunks_embedding_hnsw
 ON document_chunks
 USING hnsw (
-    embedding vector_cosine_ops  /*indexing operation*/
+    embedding vector_cosine_ops --indexing-operation
 );
 ```
+
 `vector_cosine_ops` defines the search operation using cosine distance for **embedding <=> query_vector**
 
-*Real Rag System Scale from 200 chunks to 20M chunks very fast and thus ANN indexes become essential!*
+_Real Rag System Scale from 200 chunks to 20M chunks very fast and thus ANN indexes become essential!_
 
 ---
+
 # Metadata
+
 For a smarter search instead of searching all chunks real systems user Meta data filtering.
 
-*example*
+_example_
+
 ```sql
 Only chunks from:
 - finance department
 - uploaded this month
 - company handbook
 ```
-to do this we just add columns to the table 
 
-*example schema*
+to do this we just add columns to the table
+
+_example schema_
+
 ```sql
 ALTER TABLE document_chunks
 ADD COLUMN department TEXT;
 ```
-*example usage*
-```sql 
+
+_example usage_
+
+```sql
 WHERE department = 'finance'
 ```
+
+---
+# Hybrid Search
+embedding models are trained to understand meanings only. so when we do a vector search we are basically searching for vectors with the closest meaning. this works for cases where you want to retrieve data with meaningful context, but what about syntax and identifiers? imagine asking status for the invoice id:`INV-2024-001`. The db may have many ids following the exact pattern with changing numbers 001,002,003 and so on. Such identifier looks very similar and even meaningless for your vector cosine similarity search. so how do we solve it? we use keyword search
+
+Instead of using pure vector search, we use two brains. A "Vector search" and a "Keyword Search", while vector is good for meaning and semantics, keyword is good for syntax, Ids, Names, Acronyms.. basically for the use of exact terms. This is called hybrid search.
+
+Instead of doing: 
+```
+Question -> Vector Search -> Results
+```
+
+We do: 
+```c
+1: Question -> Keyword Search -> Results 
+2: Question -> Vector Search -> Results
+
+3: Combine Results -> Final Results
+```
+## Crucial nuance with pg vector
+unlike other vector dbs that offer built-in features for hybrid search.. pg vector does not offer any such feature (cries in "I always make the wrong decisions") and needs manual combinition, the glueing of vectors and PostgreSQL's built in **Full Text Search (FTS)** in a single SQL query (guess we get more learning this way... *cope*)
+
+
+
