@@ -32,3 +32,5 @@ export async function searchChunks({
 
   return result.rows;
 }
+
+
