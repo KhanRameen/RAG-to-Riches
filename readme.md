@@ -448,9 +448,9 @@ Now this query uses the exact same where clause as the Filter method but then al
 
 I've created two functions
 
-- [A Vector Search Function](.\src\repositories\vector-search.repository.ts)
+- [A Vector Search Function](src/repositories/vector-search.repository.ts)
 
-- [ Keyword Search Function](.\src\repositories\keyword-search.repository.ts)
+- [ Keyword Search Function](src/repositories/keyword-search.repository.ts)
 
 The issue is both vector and keyword scores on a different scale. so if vector scales something around 0.94 0.91 0.8, keyword would maybe scale it somewhere like 0.35 0.21 0.18. adding these values together would results in irrelevant chunks in return, The vector numbers will always completely drown out the keyword number. So instead of using the score we use the ranking positions and Normalized values using the mathematical trick **Reciprocal Rank Fusion (RRF)**. It only looks at where a document ranks in each list
 
@@ -482,4 +482,4 @@ keywordResults.forEach((item, index) => {
 });
 ```
 
-The above functions uses the RRF method to calculate the scores and I have integrated them in the [FuseResultsFunction](.\src\repositories\rank-fusion.repository.ts).
+The above functions uses the RRF method to calculate the scores and I have integrated them in the [FuseResultsFunction](src/repositories/rank-fusion.repository.ts).
