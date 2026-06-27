@@ -1,6 +1,6 @@
 # Vector Database for Data Persistance!
 
-\*uptil now I was storing all the chunks and embeddings in a variable, **now we integrate vector db\***
+uptil now I was storing all the chunks and embeddings in a variable, **now we integrate the vector DB**
 
 ## So what is a Vector Database?
 
@@ -26,9 +26,11 @@ okay, lets get to work!
 
 ## Step 1: Setup
 
-Instead of locally installing PostgreSQ I'll run it on docker intead, Yeah, I'm just that cool (got space issues, twin)
+Instead of locally installing PostgreSQ I'll run it on docker, Yeah, I'm just that cool (got space issues, twin)
 
 ### 1- The docker-compose.yml file
+
+First time writing a Dockerfile? No worries, I've commented what each line does
 
 ```yaml
 services:
@@ -54,6 +56,8 @@ volumes: # registers the database you register under it as a permanent, global s
 
 ### 2-Start Database
 
+Now we start the DB with a single command
+
 _before this step you haves to make sure docker is running on your machine_
 
 Run
@@ -70,9 +74,9 @@ docker ps
 
 _this will give you a list of containers on your machine, check out for **output: rag-postgres**_
 
-### 3-Connect to PostgreSQL
+### 3- Connect to PostgreSQL
 
-on the terminal, we'll enter:
+on the terminal, type:
 
 ```
 docker exec -it rag-postgres psql -U postgres -d rag
@@ -118,7 +122,9 @@ verify using:
 
 You should see something similar to `vector` listed among installed extensions.
 
-Once you install pgvector, your PostgreSQL starts to understand VECTOR datatype ✌️
+Once you install pgvector, your PostgreSQL starts to understand VECTOR datatype. First Milestone Achieved.
+
+next up we
 
 ## Step 3: Create Our First Vector Table
 
@@ -136,7 +142,7 @@ CREATE TABLE document_chunks (
 );
 ```
 
-**Why Vector (768):** 768 is the embedding size of the model `nomic-embed-text` Im using to create the embeddings. It varies from model to model. Always check the embedding length first and be sure to set the same provided size for the vector on your DB because you will eventually be storing every vector of that length from here onwards.
+**Why Vector (768):** 768 is the embedding size of the model `nomic-embed-text` I'm using to create the embeddings. This varies from model to model. Always check your model's embedding length first and be sure to set the same exact size in your database configuration because you will eventually be storing every vector of that length from here onwards.
 
 ### Inspect the Table
 
@@ -188,7 +194,7 @@ because we usually only care about the semantic similarity (cosine distance).
 
 ### Important Concept
 
-Earlier, I would calculate the cosine similarity and measure it like
+Earlier, I was calculating the cosine similarity and was measuring it like
 
 ```
 1 = very similar
@@ -442,9 +448,9 @@ Now this query uses the exact same where clause as the Filter method but then al
 
 I've created two functions
 
-- [A Vector Search Function](src\repositories\vector-search.repository.ts)
+- [A Vector Search Function](.\src\repositories\vector-search.repository.ts)
 
-- [ Keyword Search Function](src\repositories\keyword-search.repository.ts)
+- [ Keyword Search Function](.\src\repositories\keyword-search.repository.ts)
 
 The issue is both vector and keyword scores on a different scale. so if vector scales something around 0.94 0.91 0.8, keyword would maybe scale it somewhere like 0.35 0.21 0.18. adding these values together would results in irrelevant chunks in return, The vector numbers will always completely drown out the keyword number. So instead of using the score we use the ranking positions and Normalized values using the mathematical trick **Reciprocal Rank Fusion (RRF)**. It only looks at where a document ranks in each list
 
@@ -476,4 +482,4 @@ keywordResults.forEach((item, index) => {
 });
 ```
 
-The above functions uses the RRF method to calulate the scores and are integrated in the [FuseResultsFunction](src\repositories\rank-fusion.repository.ts).
+The above functions uses the RRF method to calculate the scores and I have integrated them in the [FuseResultsFunction](.\src\repositories\rank-fusion.repository.ts).
