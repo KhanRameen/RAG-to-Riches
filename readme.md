@@ -1,6 +1,6 @@
 # Vector Database for Data Persistance!
 
-\*uptil now I was storing all the chunks and embeddings in a variable, **now we integrate vector db\***
+uptil now I was storing all the chunks and embeddings in a variable, **now we integrate the vector DB**
 
 ## So what is a Vector Database?
 
@@ -30,6 +30,8 @@ Instead of locally installing PostgreSQ I'll run it on docker, Yeah, I'm just th
 
 ### 1- The docker-compose.yml file
 
+First time writing a Dockerfile? No worries, I've commented what each line does
+
 ```yaml
 services:
   postgres: # service nickname
@@ -54,6 +56,8 @@ volumes: # registers the database you register under it as a permanent, global s
 
 ### 2-Start Database
 
+Now we start the DB with a single command
+
 _before this step you haves to make sure docker is running on your machine_
 
 Run
@@ -70,7 +74,7 @@ docker ps
 
 _this will give you a list of containers on your machine, check out for **output: rag-postgres**_
 
-### 3-Connect to PostgreSQL
+### 3- Connect to PostgreSQL
 
 on the terminal, type:
 
@@ -118,7 +122,9 @@ verify using:
 
 You should see something similar to `vector` listed among installed extensions.
 
-Once you install pgvector, your PostgreSQL starts to understand VECTOR datatype
+Once you install pgvector, your PostgreSQL starts to understand VECTOR datatype. First Milestone Achieved.
+
+next up we
 
 ## Step 3: Create Our First Vector Table
 
@@ -136,7 +142,7 @@ CREATE TABLE document_chunks (
 );
 ```
 
-**Why Vector (768):** 768 is the embedding size of the model `nomic-embed-text` Im using to create the embeddings. It varies from model to model. Always check the embedding length first and be sure to set the same provided size for the vector on your DB because you will eventually be storing every vector of that length from here onwards.
+**Why Vector (768):** 768 is the embedding size of the model `nomic-embed-text` I'm using to create the embeddings. This varies from model to model. Always check your model's embedding length first and be sure to set the same exact size in your database configuration because you will eventually be storing every vector of that length from here onwards.
 
 ### Inspect the Table
 
@@ -476,4 +482,4 @@ keywordResults.forEach((item, index) => {
 });
 ```
 
-The above functions uses the RRF method to calulate the scores and are integrated in the [FuseResultsFunction](.\src\repositories\rank-fusion.repository.ts).
+The above functions uses the RRF method to calculate the scores and I have integrated them in the [FuseResultsFunction](.\src\repositories\rank-fusion.repository.ts).
