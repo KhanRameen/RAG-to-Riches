@@ -6,4 +6,4 @@ And nope we are not talking about the LLM quality, we here are still talking abo
 
 ## So what exactly is Reranking..
 
-earlier we were embedding our chunks and questions separately, only comparing their vectors for retrrieval. The Reranking however, in it's unoptamized true form, reads the questions and chunks together for a more relavant score and accurate answer.
+Earlier, we embedded our chunks and questions separately, only comparing their vectors for retrieval. Reranking, however, in its unoptimized, true form, reads the questions and chunks together for a more relevant score and accurate answer
