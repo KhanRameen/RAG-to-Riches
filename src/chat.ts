@@ -1,11 +1,11 @@
 import { parseDocument } from "./parse-document.js";
 import { retrieveRelevantChunks } from "./retrieval/retrieve.js";
 import { generateAnswers } from "./llm.service/llm.service.js";
-import {buildVectorStore} from "./store/vectorStore.js"
+import { buildVectorStore } from "./store/vectorStore.js";
 import readline from "readline";
 import { getEmbeddings } from "./embeddings/embed.js";
 import { searchChunks } from "./repositories/search-chunks.repository.js";
-
+import { hybridSearch } from "./hybridsearch.js";
 
 // const filePath = process.argv[2]
 
@@ -23,32 +23,33 @@ import { searchChunks } from "./repositories/search-chunks.repository.js";
 
 // console.log("Document Ready!")
 
-const rl = readline.createInterface({ //reads input from the user and writes output to the terminal
-    input: process.stdin,
-    output: process.stdout,
-})
+const rl = readline.createInterface({
+  //reads input from the user and writes output to the terminal
+  input: process.stdin,
+  output: process.stdout,
+});
 
-async function askQuestion(){
-    
-    rl.question("\nEnter your query: ", async (question) => {
-        console.log("\nRetrieve context..\n")
+async function askQuestion() {
+  rl.question("\nEnter your query: ", async (question) => {
+    console.log("\nRetrieve context..\n");
 
-        console.log("Your Question:", question)
-        const queryEmbedding = await getEmbeddings(question);
-        const chunks = await searchChunks({embedding:queryEmbedding,limit:5})
+    console.log("Your Question:", question);
+    // const queryEmbedding = await getEmbeddings(question);
+    // const chunks = await searchChunks({embedding:queryEmbedding,limit:5})
+    const chunks = await hybridSearch(question);
 
-        const context  = chunks.map((item) => item.chunk_text).join("\n\n")
+    const context = chunks.map((item) => item.chunk_text).join("\n\n");
 
-        const prompt = `You are an assitant that helps people with their queries.
+    const prompt = `You are an assitant that helps people with their queries.
                         Answer *Only* from the provided context
                         context: ${context}
-                        query: ${question}`
+                        query: ${question}`;
 
-        console.log("Generating response...\n")
-        const answer = await generateAnswers(prompt)
-        console.log("Response:\n")
-        console.log(answer)
-        askQuestion();
-    })
+    console.log("Generating response...\n");
+    const answer = await generateAnswers(prompt);
+    console.log("Response:\n");
+    console.log(answer);
+    askQuestion();
+  });
 }
 askQuestion();

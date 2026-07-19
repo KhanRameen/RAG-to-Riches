@@ -21,3 +21,9 @@ scores = model.predict(pairs)
 
 for chunk, score in zip(chunks, scores):
     print(score, chunk)
+
+
+# Output:
+# -4.9359627 Refund requests are reviewed manually.
+# 9.521208 Refunds take 5-7 business days.     *HIGHEST*
+# -10.8838415 Employees receive annual leave.
